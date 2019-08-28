@@ -26,9 +26,23 @@ jobs:
             - run: sudo pip install pytest codecov pytest-cov
             - run: python -m pytest -sv ./pytorch_transformers/tests/ --cov
             - run: codecov
+    deploy_doc:
+        working_directory: ~/pytorch-transformers
+        docker:
+            - image: circleci/python:3.5
+        branches:
+            only:
+                - testing_circle_ci
+        steps:
+            - add_ssh_keys:
+                  fingerprints:
+                      - "5b:7a:95:18:07:8c:aa:76:4c:60:35:88:ad:60:56:71"
+            - run: sudo pip install -r docs/requirements.txt
+            - run: cd docs && make clean && make html && scp -r /pytorch-transformers/docs/_build/html/* $doc:$dir
 workflows:
   version: 2
   build_and_test:
     jobs:
+      - deploy_doc
       - build_py3
       - build_py2
