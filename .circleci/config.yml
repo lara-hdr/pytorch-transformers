@@ -34,6 +34,7 @@ jobs:
             - add_ssh_keys:
                   fingerprints:
                       - "5b:7a:95:18:07:8c:aa:76:4c:60:35:88:ad:60:56:71"
+            - checkout
             - run: sudo pip install -r docs/requirements.txt
             - run: cd docs && make clean && make html && scp -r /pytorch-transformers/docs/_build/html/* $doc:$dir
 workflow_filters: &workflow_filters
