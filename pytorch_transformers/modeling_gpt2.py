@@ -44,6 +44,10 @@ GPT2_PRETRAINED_CONFIG_ARCHIVE_MAP = {"gpt2": "https://s3.amazonaws.com/models.h
                                       "gpt2-medium": "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-medium-config.json",
                                       "gpt2-large": "https://s3.amazonaws.com/models.huggingface.co/bert/gpt2-large-config.json"}
 
+#@torch.jit.script
+#def slice_script(bias, ns, nd):
+#    return bias[:, :, ns-nd:ns, :ns]
+
 def load_tf_weights_in_gpt2(model, config, gpt2_checkpoint_path):
     """ Load tf checkpoints in a pytorch model
     """
@@ -255,7 +259,11 @@ class Attention(nn.Module):
         if self.scale:
             w = w / math.sqrt(v.size(-1))
         nd, ns = w.size(-2), w.size(-1)
-        b = self.bias[:, :, ns-nd:ns, :ns]
+        # slicing with a torch.size() is being traced as a constant
+        # replacing by a constant of the right shape.
+        # This is not correct a fix; bias is assumed 0..
+        #b = self.bias[:, :, ns-nd:ns, :ns]
+        b = torch.zeros(self.bias.shape[0], self.bias.shape[1], ns-(ns-nd), ns)
         w = w * b - 1e4 * (1 - b)
 
         w = nn.Softmax(dim=-1)(w)
@@ -473,7 +481,9 @@ class GPT2Model(GPT2PreTrainedModel):
         else:
             past_length = past[0][0].size(-2)
         if position_ids is None:
-            position_ids = torch.arange(past_length, input_ids.size(-1) + past_length, dtype=torch.long, device=input_ids.device)
+            # torch.arange is traced as a constant. Work around for now.
+            # position_ids = torch.arange(past_length, input_ids.size(-1) + past_length, dtype=torch.long, device=input_ids.device)
+            position_ids = torch.squeeze(torch.add(torch.nonzero(torch.ones(input_ids.size(-1))), past_length)).to(dtype=torch.long)
             position_ids = position_ids.unsqueeze(0).expand_as(input_ids)
 
         # Prepare head mask if needed
