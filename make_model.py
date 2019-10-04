@@ -30,7 +30,10 @@ def eval():
 
       # Encode text
       input_ids2 = torch.tensor([tokenizer.encode("Here is some text to encode hello there is something I wanted to say")])
-      torch.onnx.export(model.cpu(), input_ids2, './' + pretrained_weights+".onnx")
+      torch.onnx.export(model.cpu(),
+                        input_ids2, './' + pretrained_weights + '.onnx',
+                        input_names = ['input'],
+                        dynamic_axes = {'input' : [0, 1]})
 
       with torch.no_grad():
           last_hidden_states2 = model(input_ids2)  # Models outputs are now tuples
@@ -39,7 +42,7 @@ def eval():
       demo_app_python.check_model((input_ids1).numpy(), last_hidden_states1)
       demo_app_python.check_model((input_ids2).numpy(), last_hidden_states2)
 
-import torch.onnx.symbolic_opset9
+'''import torch.onnx.symbolic_opset9
 import torch.onnx.symbolic_helper as sym_help
 def size(g, self, dim):
     if sym_help._maybe_get_const(dim, 'i') < 0:
@@ -49,7 +52,7 @@ def size(g, self, dim):
             dim = g.op("Constant", value_t=torch.tensor(dim))
     full_shape = g.op("Shape", self)
     return torch.onnx.symbolic_opset9.select(g, full_shape, g.op("Constant", value_t=torch.tensor([0])), dim)
-torch.onnx.symbolic_opset9.size = size
+torch.onnx.symbolic_opset9.size = size'''
 
 
 eval()
